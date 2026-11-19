@@ -187,93 +187,95 @@ defmodule Ash.Resource do
 
       Ash.Schema.define_schema()
 
-      if Ash.Schema.define?(__MODULE__) and Ash.Resource.Info.generate_inspect?(__MODULE__) do
+      if Ash.Schema.define?(__MODULE__) do
         module = __MODULE__
 
-        defimpl Inspect do
-          import Inspect.Algebra, except: [color_doc: 3]
+        if Ash.Resource.Info.generate_inspect?(__MODULE__) do
+          defimpl Inspect do
+            import Inspect.Algebra, except: [color_doc: 3]
 
-          inspect_private_fields? = Ash.Resource.Info.inspect_private_fields?(module)
-          hide_inspect_fields = Ash.Resource.Info.hide_inspect_fields(module)
-          show_inspect_fields = Ash.Resource.Info.show_inspect_fields(module)
+            inspect_private_fields? = Ash.Resource.Info.inspect_private_fields?(module)
+            hide_inspect_fields = Ash.Resource.Info.hide_inspect_fields(module)
+            show_inspect_fields = Ash.Resource.Info.show_inspect_fields(module)
 
-          @show_fields module
-                       |> Ash.Resource.Info.fields()
-                       |> then(fn fields ->
-                         if is_list(show_inspect_fields) do
-                           Enum.filter(fields, &(&1.name in show_inspect_fields))
-                         else
-                           fields
-                         end
-                       end)
-                       |> Enum.reject(&Map.get(&1, :sensitive?))
-                       |> then(fn fields ->
-                         if inspect_private_fields? do
-                           fields
-                         else
-                           Enum.reject(
-                             fields,
-                             &(&1.private? ||
-                                 (is_list(show_inspect_fields) && &1.name in show_inspect_fields))
-                           )
-                         end
-                       end)
-                       |> Enum.reject(&(&1.name in hide_inspect_fields))
-                       |> Enum.map(& &1.name)
-                       |> Enum.concat([:__meta__, :calculations, :aggregates])
+            @show_fields module
+                         |> Ash.Resource.Info.fields()
+                         |> then(fn fields ->
+                           if is_list(show_inspect_fields) do
+                             Enum.filter(fields, &(&1.name in show_inspect_fields))
+                           else
+                             fields
+                           end
+                         end)
+                         |> Enum.reject(&Map.get(&1, :sensitive?))
+                         |> then(fn fields ->
+                           if inspect_private_fields? do
+                             fields
+                           else
+                             Enum.reject(
+                               fields,
+                               &(&1.private? ||
+                                   (is_list(show_inspect_fields) && &1.name in show_inspect_fields))
+                             )
+                           end
+                         end)
+                         |> Enum.reject(&(&1.name in hide_inspect_fields))
+                         |> Enum.map(& &1.name)
+                         |> Enum.concat([:__meta__, :calculations, :aggregates])
 
-          def inspect(record, opts) do
-            record = %{
-              record
-              | calculations:
-                  Ash.Actions.Read.Calculations.map_without_calc_deps(record.calculations)
-            }
+            def inspect(record, opts) do
+              record = %{
+                record
+                | calculations:
+                    Ash.Actions.Read.Calculations.map_without_calc_deps(record.calculations)
+              }
 
-            subtract_fields =
-              Enum.filter([:calculations, :aggregates], &(Map.get(record, &1) == %{}))
+              subtract_fields =
+                Enum.filter([:calculations, :aggregates], &(Map.get(record, &1) == %{}))
 
-            fields = @show_fields -- subtract_fields
+              fields = @show_fields -- subtract_fields
 
-            fun = fn field, opts ->
-              custom_options = Map.get(opts, :custom_options, [])
+              fun = fn field, opts ->
+                custom_options = Map.get(opts, :custom_options, [])
 
-              opts =
-                Map.put(
-                  opts,
-                  :custom_options,
-                  Keyword.put(custom_options, :in_resource?, true)
-                )
+                opts =
+                  Map.put(
+                    opts,
+                    :custom_options,
+                    Keyword.put(custom_options, :in_resource?, true)
+                  )
 
-              Inspect.List.keyword({field, Map.get(record, field)}, opts)
+                Inspect.List.keyword({field, Map.get(record, field)}, opts)
+              end
+
+              open =
+                color_doc("%" <> inspect(record.__struct__) <> "{", :map, opts)
+
+              sep = color_doc(",", :map, opts)
+              close = color_doc("}", :map, opts)
+
+              Inspect.Algebra.container_doc(open, fields, close, opts, fun,
+                separator: sep,
+                break: :strict
+              )
             end
 
-            open =
-              color_doc("%" <> inspect(record.__struct__) <> "{", :map, opts)
-
-            sep = color_doc(",", :map, opts)
-            close = color_doc("}", :map, opts)
-
-            Inspect.Algebra.container_doc(open, fields, close, opts, fun,
-              separator: sep,
-              break: :strict
-            )
-          end
-
-          # this was added in Elixir 1.18, so we vendored it here to be compatible w/ older elixir versions
-          def color_doc(doc, color_key, %Inspect.Opts{syntax_colors: syntax_colors})
-              when is_doc(doc) do
-            if precolor = Keyword.get(syntax_colors, color_key) do
-              postcolor = Keyword.get(syntax_colors, :reset, :reset)
-              concat({:doc_color, doc, ansi(precolor)}, {:doc_color, empty(), ansi(postcolor)})
-            else
-              doc
+            # this was added in Elixir 1.18, so we vendored it here to be compatible w/ older elixir versions
+            def color_doc(doc, color_key, %Inspect.Opts{syntax_colors: syntax_colors})
+                when is_doc(doc) do
+              if precolor = Keyword.get(syntax_colors, color_key) do
+                postcolor = Keyword.get(syntax_colors, :reset, :reset)
+                concat({:doc_color, doc, ansi(precolor)}, {:doc_color, empty(), ansi(postcolor)})
+              else
+                doc
+              end
             end
-          end
 
-          defp ansi(color) do
-            color
-            |> IO.ANSI.format_fragment(true)
-            |> IO.iodata_to_binary()
+            defp ansi(color) do
+              color
+              |> IO.ANSI.format_fragment(true)
+              |> IO.iodata_to_binary()
+            end
           end
         end
       end
