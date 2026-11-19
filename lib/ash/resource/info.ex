@@ -189,6 +189,12 @@ defmodule Ash.Resource.Info do
     Extension.get_opt(resource, [:resource], :short_name, nil) || resource.default_short_name()
   end
 
+  @doc "Whether Ash generates the resource Inspect implementation."
+  @spec generate_inspect?(Spark.Dsl.t() | Ash.Resource.t()) :: boolean
+  def generate_inspect?(resource) do
+    Extension.get_opt(resource, [:resource], :generate_inspect?, true)
+  end
+
   @doc """
   Whether to include private fields in the inspect output.
   `show_inspect_fields` takes precedence over this option.

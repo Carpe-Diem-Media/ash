@@ -187,7 +187,7 @@ defmodule Ash.Resource do
 
       Ash.Schema.define_schema()
 
-      if Ash.Schema.define?(__MODULE__) do
+      if Ash.Schema.define?(__MODULE__) and Ash.Resource.Info.generate_inspect?(__MODULE__) do
         module = __MODULE__
 
         defimpl Inspect do

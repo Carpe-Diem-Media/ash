@@ -931,6 +931,11 @@ defmodule Ash.Resource.Dsl do
         A short identifier for the resource, which should be unique. See the [monitoring guide](/documentation/topics/monitoring.md) for more.
         """
       ],
+      generate_inspect?: [
+        type: :boolean,
+        default: true,
+        doc: "Whether to generate Inspect. Disable only when providing a custom implementation."
+      ],
       inspect_private_fields?: [
         type: :boolean,
         default: true,
